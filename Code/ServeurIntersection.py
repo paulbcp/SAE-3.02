@@ -1,7 +1,6 @@
 import socket
 import json
 import select
-import threading
 
 class ServeurIntersection:
     def __init__(self, controleur, hote="127.0.0.1", port=5000):
