@@ -1,4 +1,3 @@
-import Domaine
 import socket
 import json
 import select
@@ -23,4 +22,25 @@ class ServeurIntersection:
         self.__clients.append(conn)
     def boucle(self):
         while self.__actif:
-            
+            lisibles, _, _ = select.select([self.__socket_serveur] + self.__clients, [], [], 0.1)
+            for s in lisibles:
+                if s is self.__socket_serveur:
+                    self.accepter()
+                else:
+                    self.lire(s)
+    def arreter(self):
+        self.__actif = False
+
+    def lire(self, client):
+        donnees = client.recv(1024)
+        if not donnees:
+            self.__clients.remove(client)
+            client.close()
+            return
+        print("reçu :", donnees.decode())
+
+    def envoyer_etat(self):
+        etat = [{"id_entree": f.id_entree, "etat": f.etat} for f in self.__controleur.feux]
+        message = json.dumps(etat).encode()
+        for client in self.__clients:
+            client.send(message)
