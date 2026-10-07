@@ -54,4 +54,4 @@ class ServeurIntersection:
             client.send(message)
     def prevenir(self):
         if self.__rappel:
-            self.__rappel(list(self.__vehicules.values())), self.__controleur.feux)
+            self.__rappel(list(self.__vehicules.values()), self.__controleur.feux)
