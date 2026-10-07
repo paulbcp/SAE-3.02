@@ -3,7 +3,8 @@ import json
 import select
 
 class ServeurIntersection:
-    def __init__(self, controleur, hote="127.0.0.1", port=5000):
+    def __init__(self, controleur, rappel=None, hote="127.0.0.1", port=5000):
+        self.__rappel = rappel
         self.__controleur = controleur
         self.__hote = hote
         self.__port = port
@@ -11,6 +12,14 @@ class ServeurIntersection:
         self.__clients = []
         self.__vehicules = {}
         self.__actif = False
+
+    @property
+    def controleur(self):
+        return self.__controleur
+
+    @controleur.setter
+    def controleur(self, nouveau):
+        self.__controleur = nouveau
     def demarrer(self):
         self.__socket_serveur = socket.socket()
         self.__socket_serveur.bind((self.__hote, self.__port))
@@ -43,3 +52,6 @@ class ServeurIntersection:
         message = json.dumps(etat).encode()
         for client in self.__clients:
             client.send(message)
+    def prevenir(self):
+        if self.__rappel:
+            self.__rappel(list(self.__vehicules.values())), self.__controleur.feux)
