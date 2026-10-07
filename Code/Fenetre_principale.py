@@ -33,7 +33,8 @@ from Domaine import (
     ControleurGiratoireFeux,
     ControleurStop,
     ControleurBase,
-    PRIORITAIRE
+    PRIORITAIRE,
+    NORMAL
 )
 #------------------------------------------------------------------------------
 
