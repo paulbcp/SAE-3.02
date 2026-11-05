@@ -12,6 +12,7 @@ class ServeurIntersection:
         self.__clients = []
         self.__vehicules = {}
         self.__actif = False
+        self.__stats = stats
 
     @property
     def controleur(self):
