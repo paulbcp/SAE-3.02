@@ -1,9 +1,13 @@
+import time
 NORMAL = "normal"
 PRIORITAIRE = "prioritaire"
 
 ROUGE = "rouge"
 ORANGE = "orange"
 VERT = "vert"
+DUREE_VERT = 5          # secondes
+DUREE_ORANGE = 1.5
+DUREE_TOUT_ROUGE = 1.5
 
 
 class Vehicule:
@@ -172,6 +176,7 @@ class ControleurFeux(ControleurBase):
     def __init__(self, carrefour_id, nb_entrees=4):
         super().__init__(carrefour_id, nb_entrees)
         self.__phase = 0
+        self.__debut_phase = time.monotonic()
 
     @property
     def phase(self):
@@ -186,10 +191,22 @@ class ControleurFeux(ControleurBase):
         if prioritaire is not None:
             self.donner_priorite(prioritaire)
             return
-        self.phase = 1 - self.phase
-        entrees_vertes = {0, 2} if self.phase == 0 else {1, 3}
+
+        ecoule = time.monotonic() - self.__debut_phase
+        if ecoule >= DUREE_VERT + DUREE_ORANGE + DUREE_TOUT_ROUGE:
+            self.phase = 1 - self.phase          # on passe à l'autre axe
+            self.__debut_phase = time.monotonic()
+            ecoule = 0
+
+        if ecoule < DUREE_VERT:
+            couleur = VERT
+        elif ecoule < DUREE_VERT + DUREE_ORANGE:
+            couleur = ORANGE
+        else:
+            couleur = ROUGE
+        entrees_actives = {0, 2} if self.phase == 0 else {1, 3}
         for feu in self.feux:
-            feu.changer_etat(VERT if feu.id_entree in entrees_vertes else ROUGE)
+            feu.changer_etat(couleur if feu.id_entree in entrees_actives else ROUGE)
 
 
 class ControleurGiratoireFeux(ControleurBase):
