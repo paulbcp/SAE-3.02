@@ -109,13 +109,14 @@ class FenetrePrincipale(QMainWindow):
         self.simulation.start()
 
     # ---------------------------------------------------------------- slots
-    def on_maj(self, vehicules, feux):
-        """Appelé à chaque signal du thread (dans le thread principal)."""
+    def on_maj(self, vehicules, feux, stats):
         self.vehicules_affiches = vehicules
         self.etats_feux = feux
         self.mettre_a_jour_stats()
+        if "taux_accident" in stats:
+            self.lbl_accident.setText(f"{stats['taux_accident']:.1f} %")
         self.redessiner()
-
+        
     def changer_carrefour(self, type_c):
         self.carrefour = type_c
         self.controleur = CONTROLEUR[type_c]("carrefour_1")
