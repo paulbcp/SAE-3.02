@@ -145,10 +145,22 @@ class ControleurBase:
 
     def evaluer(self, vehicules):
         pass
+    def trouver_prioritaire(self, vehicules):
+        for v in vehicules:
+            if v.est_prioritaire():
+                return v
+        return None
 
+    def donner_priorite(self, prioritaire):
+        for feu in self.feux:
+            feu.changer_etat(VERT if feu.id_entree == prioritaire.entree else ROUGE)
 
 class ControleurStop(ControleurBase):
     def evaluer(self, vehicules):
+        prioritaire = self.trouver_prioritaire(vehicules)
+        if prioritaire is not None:
+            self.donner_priorite(prioritaire)
+            return
         for feu in self.feux:
             feu.changer_etat(ROUGE)
         if vehicules:
@@ -170,6 +182,10 @@ class ControleurFeux(ControleurBase):
         self.__phase = value
 
     def evaluer(self, vehicules):
+        prioritaire = self.trouver_prioritaire(vehicules)
+        if prioritaire is not None:
+            self.donner_priorite(prioritaire)
+            return
         self.phase = 1 - self.phase
         entrees_vertes = {0, 2} if self.phase == 0 else {1, 3}
         for feu in self.feux:
