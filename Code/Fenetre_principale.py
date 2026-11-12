@@ -1,10 +1,14 @@
 import sys
-from PyQt6.QtCore import Qt, QSize, QRectF
-from PyQt6.QtGui import QColor, QBrush, QPen, QPainterPath
+import math
+import time
+
+from PyQt6.QtCore import Qt, QSize, QRectF, QPointF
+from PyQt6.QtGui import QColor, QBrush, QFont, QPen, QPainter, QPainterPath, QPolygonF
 from PyQt6.QtWidgets import (
     QMainWindow,
     QWidget,
     QPushButton,
+    QButtonGroup,
     QLabel,
     QGraphicsScene,
     QGraphicsView,
@@ -13,40 +17,31 @@ from PyQt6.QtWidgets import (
     QFormLayout,
     QApplication,
 )
-from Domaine import (
-    ControleurFeux,
-    ControleurGiratoireFeux,
-    ControleurStop,
+from ClientVehicule import GenerateurTrafic
+    CONTROLEURS as CONTROLEUR,
+    TYPES_CARREFOUR as TYPE_CARREFOUR,
+    STOP,
+    FEUX,
+    GIRATOIRE,
+    PANNEAU_STOP,
     PRIORITAIRE,
 )
+from Geometrie import (LARGEUR, HAUTEUR, ROUTE, PX_PAR_UNITE, DISPOSITION_GIRATOIRE, DISTANCE_LIGNE,
+                       RAYON_EXTERIEUR, RAYON_ILOT, trajectoire)
 from Simulationthread import SimulationThread
 
 # ------------------------------------------------------------------------------
 
-STOP = "stop"
-FEUX = "feux"
-GIRATOIRE = "giratoire"
-
-TYPE_CARREFOUR = {
-    STOP: "Carrefour à stop",
-    FEUX: "Carrefour à feux",
-    GIRATOIRE: "Carrefour à giratoire",
-}
-
-CONTROLEUR = {
-    STOP: ControleurStop,
-    FEUX: ControleurFeux,
-    GIRATOIRE: ControleurGiratoireFeux,
-}
+__all__ = ["FenetrePrincipale", "STOP", "FEUX", "GIRATOIRE", "TYPE_CARREFOUR", "CONTROLEUR"]
 
 COULEUR_FEU = {"rouge": "#FA0000", "orange": "#FA7500", "vert": "#32FA00"}
 COULEUR_ETEINT = {"rouge": "#4A1010", "orange": "#4A3010", "vert": "#104A10"}
 
 
 class FenetrePrincipale(QMainWindow):
-    LARGEUR = 560      # taille de la scène
-    HAUTEUR = 480
-    ROUTE = 100        # largeur des routes
+    LARGEUR = LARGEUR      # taille de la scène
+    HAUTEUR = HAUTEUR
+    ROUTE = ROUTE        # largeur des routes
 
     def __init__(self):
         super().__init__()
@@ -55,10 +50,14 @@ class FenetrePrincipale(QMainWindow):
 
         # --- données affichées ---
         self.vehicules_affiches = []
-        self.carrefour = GIRATOIRE
+        self.carrefour = carrefour
         self.controleur = CONTROLEUR[self.carrefour]("carrefour_1")
         self.etats_feux = [{"id_entree": f.id_entree, "etat": f.etat}
                            for f in self.controleur.feux]
+        self.generation = 0
+        self.element_dynamique = []
+        self.element_fixes = []
+        self.disposition_dessinee = None
 
         # --- scène au centre ---
         self.scene = QGraphicsScene(0, 0, self.LARGEUR, self.HAUTEUR)
@@ -67,6 +66,8 @@ class FenetrePrincipale(QMainWindow):
 
         # --- boutons du haut (type de carrefour) ---
         self.boutons = {}
+        self.groupe_boutons = QButtonGroup(self)
+        self.groupe_boutons.setExclusive(True)
         barre = QHBoxLayout()
         for type_c, texte in TYPE_CARREFOUR.items():
             bouton = QPushButton(texte)
@@ -86,6 +87,8 @@ class FenetrePrincipale(QMainWindow):
         stats.addRow("Vitesse moyenne :", self.lbl_vitesse)
         stats.addRow("Prioritaires :", self.lbl_prio)
         stats.addRow("Taux d'accident :", self.lbl_accident)
+        stats.addRow("Serveur :", self.lbl_serveur)
+        stats.addRow("Base de données :", self.lbl_bdd)
         panneau = QWidget()
         panneau.setLayout(stats)
         panneau.setFixedWidth(200)
@@ -101,13 +104,25 @@ class FenetrePrincipale(QMainWindow):
         centre.setLayout(principal)
         self.setCentralWidget(centre)
 
+        self.dessiner_carrefour()
         self.redessiner()
+        self.mettre_a_jour_titre()
 
         # --- thread du serveur ---
-        self.simulation = SimulationThread(self.controleur)
+        self.simulation = SimulationThread(self.controleur, port, avec_bdd)
         self.simulation.maj.connect(self.on_maj)
+        self.trafic = None
+        try:
+            port_reel = self.simulation.serveur.demarrer()
+        except OSError as erreur:
+            print("Le carrefour n'a pas pu démarrer :", erreur)
+            self.lbl_serveur.setText("erreur (voir console)")
+            return
+        self.lbl_serveur.setText(f"port {port_reel}")
         self.simulation.start()
-
+        if avec_trafic:
+            self.trafic = GenerateurTrafic(port=port_reel)
+            self.trafic.demarrer()
     # ---------------------------------------------------------------- slots
     def on_maj(self, vehicules, feux, stats):
         self.vehicules_affiches = vehicules
