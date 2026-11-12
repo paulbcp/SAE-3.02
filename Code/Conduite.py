@@ -52,3 +52,32 @@ def obstacle_devant(vehicule, autres, horizon=None):
                         (xb + DECALAGE_DISQUE * hxb, yb + DECALAGE_DISQUE * hyb)))
     if not proches:
         return None
+    
+    def contact(d):
+        """Si le véhicule, avancé de d, touche un autre véhicule : (vitesse de celui-ci), sinon None."""
+        px, py, hx, hy = traj.pose(x + d)
+        mes_disques = ((px - DECALAGE_DISQUE * hx, py - DECALAGE_DISQUE * hy),
+                       (px + DECALAGE_DISQUE * hx, py + DECALAGE_DISQUE * hy))
+        for autre, hxb, hyb, d1, d2 in proches:
+            for ax, ay in mes_disques:
+                for bx, by in (d1, d2):
+                    if (ax - bx) ** 2 + (ay - by) ** 2 < _SEUIL2:
+                        return max(0.0, autre.vitesse * (hx * hxb + hy * hyb))
+        return None
+
+    d = 0.0
+    while d <= horizon:
+        vitesse_obstacle = contact(d)
+        if vitesse_obstacle is not None:
+            if d > 0:                      # affine par dichotomie entre le dernier pas libre et celui-ci
+                bas, haut = d - PAS_BALAYAGE, d
+                for _ in range(6):
+                    milieu = (bas + haut) / 2
+                    if contact(milieu) is None:
+                        bas = milieu
+                    else:
+                        haut = milieu
+                d = haut
+            return (d, vitesse_obstacle)
+        d += PAS_BALAYAGE
+    return None
