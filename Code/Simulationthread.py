@@ -1,19 +1,23 @@
 from PyQt6.QtCore import QThread, pyqtSignal
 from ServeurIntersection import ServeurIntersection
-from base_stats import BaseStats
+
+
+def ouvrir_journal():
+    try:
+        from Journal import ouvrir_journal as ouvrir
+    except ImportError as erreur:
+        print("MariaDB désactivée :", erreur)
+        return None
+    return ouvrir()
 
 
 class SimulationThread(QThread):
     maj = pyqtSignal(list, list, dict)   # véhicules, feux, stats
 
-    def __init__(self, controleur):
+    def __init__(self, controleur, port=5000, avec_bdd=True):
         super().__init__()
-        try:
-            stats = BaseStats()
-        except Exception as erreur:
-            print("MariaDB indisponible, statistiques désactivées :", erreur)
-            stats = None
-        self.serveur = ServeurIntersection(controleur, self.envoyer, stats)
+        journal = ouvrir_journal() if avec_bdd else None
+        self.serveur = ServeurIntersection(controleur, self.envoyer, journal, port=port)
 
     def envoyer(self, vehicules, feux, stats):
         self.maj.emit([v.vers_json() for v in vehicules],
@@ -21,5 +25,5 @@ class SimulationThread(QThread):
                       stats)
 
     def run(self):
-        self.serveur.demarrer()
+        self.serveur.demarrer()      # sans effet s'il a déjà été démarré par l'interface
         self.serveur.boucle()
