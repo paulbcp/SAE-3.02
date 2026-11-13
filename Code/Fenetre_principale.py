@@ -3,7 +3,7 @@ import math
 import time
 
 from PyQt6.QtCore import Qt, QSize, QRectF, QPointF
-from PyQt6.QtGui import QColor, QBrush, QFont, QPen, QPainter, QPainterPath, QPolygonF
+from PyQt6.QtGui import QColor, QBrush, QFont, QPen, QPainterPath, QPolygonF
 from PyQt6.QtWidgets import (
     QMainWindow,
     QWidget,
@@ -56,8 +56,8 @@ class FenetrePrincipale(QMainWindow):
         self.etats_feux = [{"id_entree": f.id_entree, "etat": f.etat}
                            for f in self.controleur.feux]
         self.generation = 0
-        self.element_dynamique = []
-        self.element_fixes = []
+        self.elements_dynamiques = []
+        self.elements_fixes = []
         self.disposition_dessinee = None
 
         # --- scène au centre ---
@@ -74,6 +74,7 @@ class FenetrePrincipale(QMainWindow):
             bouton = QPushButton(texte)
             bouton.setCheckable(True)
             bouton.clicked.connect(lambda checked, t=type_c: self.changer_carrefour(t))
+            self.groupe_boutons.addButton(bouton)
             self.boutons[type_c] = bouton
             barre.addWidget(bouton)
         self.boutons[self.carrefour].setChecked(True)
@@ -83,6 +84,8 @@ class FenetrePrincipale(QMainWindow):
         self.lbl_vitesse = QLabel("0.0")
         self.lbl_prio = QLabel("0")
         self.lbl_accident = QLabel("-")
+        self.lbl_serveur = QLabel("-")
+        self.lbl_bdd = QLabel("-")
         stats = QFormLayout()
         stats.addRow("Véhicules :", self.lbl_nb)
         stats.addRow("Vitesse moyenne :", self.lbl_vitesse)
@@ -107,7 +110,6 @@ class FenetrePrincipale(QMainWindow):
 
         self.dessiner_carrefour()
         self.redessiner()
-        self.mettre_a_jour_titre()
 
         # --- thread du serveur ---
         self.simulation = SimulationThread(self.controleur, port, avec_bdd)
@@ -158,7 +160,6 @@ class FenetrePrincipale(QMainWindow):
         self.mettre_a_jour_stats()
         self.lbl_accident.setText("-")
         self.redessiner()
-        self.mettre_a_jour_titre()
         if self.trafic is not None:
             self.trafic.demarrer()
 
