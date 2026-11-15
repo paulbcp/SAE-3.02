@@ -2,7 +2,7 @@ import argparse
 import datetime
 import sys
 
-from Config_bdd import charger_config
+from config_bdd import charger_config
 
 BRAS = {0: "haut", 1: "droite", 2: "bas", 3: "gauche"}
 
